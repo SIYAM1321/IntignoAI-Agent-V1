@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>IntignoAI Agent</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/chat-v12.css" />
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <button id="sidebarToggleBtn" class="icon-button sidebar-toggle" title="Toggle chat history" aria-label="Toggle chat history">☰</button>
+    <div class="brand">
+      <div class="brand-mark">I</div>
+      <div>
+        <div class="brand-name">IntignoAI Agent</div>
+        <div id="modelText" class="brand-sub">z-ai/glm-5.3-flash</div>
+        <div id="osText" class="brand-os">Detecting operating system…</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div id="serverStatus" class="server-status"><span class="dot"></span> Local</div>
+      <button id="activityToggleBtn" class="icon-button activity-toggle" title="Toggle activity panel" aria-label="Toggle activity panel">◷</button>
+      <button id="settingsBtn" class="icon-button" title="Settings" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <aside id="chatSidebar" class="chat-sidebar">
+      <div class="sidebar-head">
+        <div class="eyebrow">Chats</div>
+        <button id="newChatBtn" class="new-chat"><span>＋</span> New chat</button>
+      </div>
+      <div class="sidebar-search">
+        <input id="chatSearchInput" class="text-input sidebar-search-input" placeholder="Search chats…" autocomplete="off" />
+      </div>
+      <div id="chatList" class="chat-list"></div>
+    </aside>
+    <div id="sidebarResizer" class="pane-resizer sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Resize chat history"></div>
+
+    <section class="chat-panel">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">Chat</div>
+          <div id="chatTitleInline" class="chat-title-inline">New chat</div>
+          <div id="workspaceInline" class="workspace-path">Loading workspace…</div>
+        </div>
+        <div id="rateChip" class="rate-chip">AI 10/10 left</div>
+      </div>
+
+      <div id="chatScroll" class="chat-scroll">
+        <div id="messageList" class="message-list"></div>
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">✦</div>
+          <h2>Operate, code and inspect your computer</h2>
+          <p>Ask IntignoAI to edit files, run local commands, launch long-running programs, check ports, inspect processes or search the web.</p>
+          <div class="example-grid">
+            <button data-example="Show my project structure" class="example-chip">Show project structure</button>
+            <button data-example="Create hello.py that prints Hello World and run it" class="example-chip">Create + run Python</button>
+            <button data-example="Check which Python versions are installed on my computer" class="example-chip">Check Python versions</button>
+            <button data-example="Search DuckDuckGo for the latest Flask documentation" class="example-chip">Web search</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="recoveryBar" class="recovery-bar hidden">
+        <div class="recovery-copy"><strong>Saved turn needs recovery</strong><span id="recoveryText">Resume this turn using the saved checkpoint and previous tool outputs.</span></div>
+        <div class="recovery-actions"><button id="discardRecoveryBtn" class="secondary-button">Dismiss</button><button id="resumeBtn" class="primary-button">Resume turn</button></div>
+      </div>
+      <div class="composer-dock">
+        <div id="attachmentTray" class="attachment-tray hidden" aria-live="polite"></div>
+        <div class="composer-card">
+          <textarea id="messageInput" rows="1" placeholder="Message IntignoAI…" autocomplete="off"></textarea>
+          <div class="composer-bar">
+            <button id="attachBtn" class="composer-icon-btn" title="Attach files or images" aria-label="Attach files"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <input id="fileInput" type="file" multiple hidden />
+            <span class="embedded-pill" title="The agent's browser runs only inside this window. No physical browser is ever opened."><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="2.5"/><path d="M3 9h18"/></svg>Embedded browser</span>
+            <div class="composer-spacer"></div>
+
+            <div id="modelPicker" class="model-picker">
+              <button id="modelPickerBtn" class="model-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="Choose model and reasoning effort">
+                <span id="modelPickerDot" class="mp-dot"></span>
+                <span id="modelPickerLabel" class="mp-label">GLM-5.3-Flash</span>
+                <span id="modelPickerEffort" class="mp-effort">High</span>
+                <svg class="mp-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div id="modelMenu" class="model-menu hidden" role="listbox" aria-label="Model">
+                <div class="mm-label">Model</div>
+                <div id="modelMenuItems"></div>
+                <div id="mmReasoning" class="mm-reasoning">
+                  <div class="mm-label">Reasoning effort</div>
+                  <div class="mm-seg" role="radiogroup" aria-label="Reasoning effort">
+                    <button type="button" class="mm-seg-btn" data-effort="low" role="radio"><b>Low</b><span>Fast</span></button>
+                    <button type="button" class="mm-seg-btn" data-effort="high" role="radio"><b>High</b><span>Balanced</span></button>
+                    <button type="button" class="mm-seg-btn" data-effort="max" role="radio"><b>Max</b><span>Deepest</span></button>
+                  </div>
+                  <div id="mmEffortHint" class="mm-hint"></div>
+                </div>
+                <div id="mmNoReasoning" class="mm-hint mm-hint-pad hidden">This model uses its own built-in reasoning. No effort setting is needed.</div>
+              </div>
+            </div>
+            <select id="chatModelSelect" class="hidden-select" aria-hidden="true" tabindex="-1">
+              <option value="z-ai/glm-5.3-flash">GLM-5.3-Flash</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+            </select>
+            <select id="reasoningEffort" class="hidden-select" aria-hidden="true" tabindex="-1"><option value="low">Low</option><option value="high">High</option><option value="max">Max</option></select>
+
+            <button id="sendBtn" class="send-button" title="Send" aria-label="Send message"><svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12 20 4.5l-4.2 15-3.1-6.2L4.5 12Z"/><path d="m12.7 13.3 3.1-3.1"/></svg></button>
+          </div>
+        </div>
+        <div class="footer-note">IntignoAI can make mistakes. It has local machine access, so review actions before approving them.</div>
+      </div>
+    </section>
+    <div id="activityResizer" class="pane-resizer activity-resizer" role="separator" aria-orientation="vertical" aria-label="Resize activity panel"></div>
+
+    <aside class="activity-panel">
+      <div class="panel-head browser-head">
+        <div class="browser-head-main">
+          <div class="panel-tabs">
+            <button id="panelTabActivity" class="panel-tab">Activity</button>
+            <button id="panelTabBrowser" class="panel-tab active">Browser</button>
+          </div>
+          <div id="activityMeta" class="activity-meta hidden">Waiting for a task</div>
+          <div id="browserMeta" class="activity-meta browser-title">Embedded browser</div>
+        </div>
+        <div class="browser-head-actions">
+          <button id="browserExpandBtn" class="icon-button" title="Expand browser view" aria-label="Expand browser view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          <button id="maximizeBtn" class="icon-button hidden" title="Maximize activity">⛶</button>
+        </div>
+      </div>
+      <div id="activityScroll" class="activity-scroll hidden">
+        <div class="activity-empty"><div class="pulse-ring"></div><strong>No activity yet</strong><span>Tool calls, processes and results will appear here live.</span></div>
+      </div>
+      <div id="browserPanel" class="browser-panel">
+        <div class="browser-toolbar">
+          <button id="browserStreamBtn" class="primary-button" title="Start or stop the live view">Start stream</button>
+          <button id="browserNewTabBtn" class="secondary-button hidden">New tab</button>
+          <div class="browser-url-wrap">
+            <input id="browserUrlInput" placeholder="Search or type a URL" spellcheck="false" autocomplete="off" />
+            <button id="browserGoBtn" class="secondary-button">Go</button>
+          </div>
+          <span id="browserStreamState" class="browser-state">Not streaming</span>
+        </div>
+        <div id="browserHumanBanner" class="browser-human-banner hidden"><b>Your input is needed here.</b> <span id="browserHumanText"></span></div>
+        <div class="browser-viewport">
+          <div id="browserCursor" aria-hidden="true" title="Browser pointer"></div>
+          <img id="browserStreamImg" tabindex="0" alt="Live view of the embedded browser" decoding="async" />
+          <div id="browserStreamEmpty" class="browser-empty">
+            <div class="browser-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg></div>
+            <strong>Embedded agent browser</strong>
+            <span>It opens here by itself when the agent browses. Sign-ins, security checks and clicks all happen inside this view; no separate browser window is ever opened.</span>
+          </div>
+          <div id="browserStreamError" class="browser-error hidden"></div>
+        </div>
+        <div class="browser-foot">
+          <span class="browser-input-tip">Click the page, then type directly · Esc returns to chat</span>
+          <button id="browserEnterBtn" class="secondary-button" title="Send Enter">⏎</button>
+        </div>
+        <div class="browser-status-line">Live CDP screencast · <span id="browserStreamUrl"></span></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="activityModal" class="modal hidden">
+  <div class="modal-card fullscreen-card">
+    <div class="modal-head"><div><div class="eyebrow">Activity Details</div><div class="modal-title">Full execution timeline</div></div><div class="modal-head-actions"><button id="copyActivityBtn" class="copy-btn" title="Copy all activity">Copy all</button><button id="closeModalBtn" class="icon-button">×</button></div></div>
+    <div id="modalBody" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="renameModal" class="modal hidden">
+  <div class="modal-card rename-card">
+    <div class="modal-head"><div><div class="eyebrow">Rename</div><div class="modal-title">Rename chat</div></div><button id="closeRenameBtn" class="icon-button">×</button></div>
+    <label class="field-label" for="renameInput">Chat title</label>
+    <input id="renameInput" class="text-input" maxlength="120" />
+    <div id="renameStatus" class="settings-status"></div>
+    <div class="settings-actions"><button id="renameCancelBtn" class="secondary-button">Cancel</button><button id="renameSaveBtn" class="primary-button">Save</button></div>
+  </div>
+</div>
+
+<div id="deleteChatModal" class="modal hidden">
+  <div class="modal-card rename-card">
+    <div class="modal-head"><div><div class="eyebrow">Delete</div><div class="modal-title">Delete this chat?</div></div><button id="closeDeleteChatBtn" class="icon-button">×</button></div>
+    <div class="settings-help" id="deleteChatText">This permanently removes the chat, its messages and its activity log. This cannot be undone.</div>
+    <div class="settings-actions"><button id="deleteChatCancelBtn" class="secondary-button">Cancel</button><button id="deleteChatConfirmBtn" class="danger-button">Delete chat</button></div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal hidden">
+  <div class="modal-card settings-card">
+    <div class="modal-head"><div><div class="eyebrow">Settings</div><div class="modal-title">Local workspace</div></div><button id="closeSettingsBtn" class="icon-button">×</button></div>
+    <label class="field-label" for="workspaceInput">Default workspace</label>
+    <input id="workspaceInput" class="text-input" autocomplete="off" />
+    <label class="field-label" for="apiKeyInput">Google Gemini API key (optional)</label>
+    <input id="apiKeyInput" class="text-input" type="password" placeholder="Paste Google key to add or replace it" autocomplete="new-password" />
+    <div id="apiKeyHelp" class="settings-help">The key is stored in the local .env file and is never sent back to the browser. Leave blank to keep the currently saved key.</div>
+    <label class="field-label" for="nvidiaApiKeyInput">NVIDIA API key for GLM-5.3-Flash</label>
+    <input id="nvidiaApiKeyInput" class="text-input" type="password" placeholder="Paste NVIDIA NIM API key" autocomplete="new-password" />
+    <div id="nvidiaApiKeyHelp" class="settings-help">Required to use GLM-5.3-Flash. Leave blank to keep the saved NVIDIA key. Do not paste API keys into chat messages.</div>
+    <label class="field-label" for="modelInput">Default model</label>
+    <select id="modelInput" class="text-input">
+      <option value="z-ai/glm-5.3-flash">GLM-5.3-Flash (NVIDIA NIM)</option>
+      <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+    </select>
+    <div class="settings-row">
+      <div><label class="field-label" for="rpmInput">App request cap (max 10/min)</label><input id="rpmInput" class="text-input" type="number" min="1" max="10" step="1" /></div>
+      <div><label class="field-label" for="retriesInput">Retries after temporary errors (0–2)</label><input id="retriesInput" class="text-input" type="number" min="0" max="2" step="1" /></div>
+    </div>
+    <div class="settings-help">Requests are counted in a persistent rolling 60-second window. Google also applies project/model-specific limits; this local cap cannot count requests made by other apps using the same API key. File/terminal access is local to this computer.</div>
+    <div class="knowledge-section">
+      <div class="knowledge-head"><strong>Persistent memory & skills</strong><button id="refreshKnowledgeBtn" class="secondary-button">Refresh</button></div>
+      <label class="field-label" for="knowledgeKind">Append to</label><select id="knowledgeKind" class="text-input"><option value="memory">MEMORY.MD</option><option value="skill">SKILLS.MD</option></select>
+      <input id="knowledgeTitle" class="text-input" placeholder="Short title (optional for memory)" />
+      <textarea id="knowledgeContent" class="text-input knowledge-textarea" rows="3" placeholder="Add a durable preference, fact, or reusable workflow…"></textarea>
+      <button id="addKnowledgeBtn" class="secondary-button">Append entry</button>
+      <div id="knowledgeSummary" class="settings-help">Entries are appended, deduplicated, and screened for common secrets. Existing entries are not overwritten.</div>
+    </div>
+    <div id="settingsStatus" class="settings-status"></div>
+    <div class="settings-actions"><button id="settingsCancelBtn" class="secondary-button">Close</button><button id="saveWorkspaceBtn" class="primary-button">Save settings</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@16.3.0/lib/marked.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

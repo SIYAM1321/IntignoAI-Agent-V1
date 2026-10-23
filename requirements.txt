@@ -1,0 +1,8 @@
+Flask>=3.1,<4
+python-dotenv>=1.0,<2
+psutil>=5.9,<7
+# Perceptual image hashing for the YouTube thumbnail matcher (v1.8).
+pillow>=10.0,<12
+# greenlet 3.2.5 has no Windows wheels; this avoids a Visual C++ source build on Python 3.9.
+greenlet==3.2.4; python_version == "3.9"
+playwright>=1.50,<2
